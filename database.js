@@ -7,54 +7,54 @@ const DBSOURCE = "db.sqlite"
 let db = new sqlite3.Database(DBSOURCE, (err) => {
     if (err) {
         // Cannot open database
-        console.error(err.message)
-        throw err
+        console.error(err.message);
+        throw err;
     } else {
-        console.log('Connected to the SQlite database.')
-        db.run(`CREATE TABLE products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            productName text, 
-            description text,
-            category text,
-            brand text,
-            expiredDate text,
-            manufacturedDate text,
-            batchNumber INTEGER,
-            unitPrice INTEGER,
-            quantity INTEGER,
-            createdDate text
-            )`, (err) => {
-            if (err) {
-                // Table already created
+        console.log('Connected to the SQLite database.');
+
+        // Check if the table already exists
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='customer'", (tableErr, tableRow) => {
+            if (tableErr) {
+                console.error(tableErr.message);
+            } else if (tableRow) {
+                // Table already exists, no need to create
+                console.log('Table "customer" already exists. Not creating again.');
             } else {
-                // Table just created, creating some rows
-                var insert = 'INSERT INTO products (productName, description, category, brand, expiredDate, manufacturedDate, batchNumber, unitPrice, quantity, createdDate) VALUES (?,?,?,?,?,?,?,?,?,?)'
-                db.run(insert, ["White Basmathi Rice", "White Basmathi Rice imported from Pakistan. High-quality rice with extra fragrance. Organically grown.", "Rice", "CIC", "2023.05.04", "2022.02.20", 324567, , 1020, 200, "2022.02.24"])
+                // Table doesn't exist, create it
+                db.run(`CREATE TABLE customer (
+                    customerId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT, 
+                    address TEXT,
+                    email TEXT,
+                    dateOfBirth TEXT,
+                    gender TEXT,
+                    age INTEGER,
+                    cardHolderName TEXT,
+                    cardNumber INTEGER,
+                    expiryDate TEXT,
+                    cvv INTEGER,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )`, (createErr) => {
+                    if (createErr) {
+                        // Table creation failed
+                        console.error(createErr.message);
+                    } else {
+                        console.log('Table "customer" created.');
+                        // Insert data into the newly created table
+                        var insert = 'INSERT INTO customer (name, address, email, dateOfBirth, gender, age, cardHolderName, cardNumber, expiryDate, cvv) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                        db.run(insert, ['A.D. Lakith Dharmasiri', 'No 324/A Ra De Mel Road, Colombo', 'lakith@gamil.com', '1991.02.25', 'female', 28, 'A.D.L.Dharmasiri', 102445217895, '12/2022', 246], (insertErr) => {
+                            if (insertErr) {
+                                console.error(insertErr.message);
+                            } else {
+                                console.log('Data inserted into "customer" table.');
+                            }
+                        });
+                    }
+                });
             }
-        })
-
-
-        db.run(`CREATE TABLE suppliers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            supplierName text, 
-            address text,
-            joinedDate text,
-            mobileNo text
-            )`, (err) => {
-            if (err) {
-                // Table already created
-            } else {
-                // Table just created, creating some rows
-                var insert = 'INSERT INTO suppliers (supplierName, address, joinedDate, mobileNo) VALUES (?,?,?,?)'
-                db.run(insert, ["D.J.Ishara", "345A ,R.A De Mel Road, Colombo 3", "16/3/2022", "0776600933"])
-
-            }
-        })
-
-
-
+        });
     }
-})
+});
 
 module.exports = db
 

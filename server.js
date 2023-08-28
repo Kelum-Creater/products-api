@@ -20,9 +20,9 @@ app.listen(HTTP_PORT, () => {
     console.log("Server running on port %PORT%".replace("%PORT%", HTTP_PORT))
 });
 
-app.get("/api/products", (req, res, next) => {
+app.get("/api/customer", (req, res, next) => {
     try {
-        var sql = "select * from products"
+        var sql = "select * from customer"
         var params = []
         db.all(sql, params, (err, rows) => {
             if (err) {
@@ -40,9 +40,9 @@ app.get("/api/products", (req, res, next) => {
 
 });
 
-app.get("/api/products/:id", (req, res, next) => {
+app.get("/api/customer/:id", (req, res, next) => {
     try {
-        var sql = "select * from products where id = ?"
+        var sql = "select * from customer where id = ?"
         var params = [req.params.id]
         db.get(sql, params, (err, row) => {
             if (err) {
@@ -102,82 +102,74 @@ app.get("/api/products/unitPrice/:unitPrice", (req, res, next) => {
     }
 });
 
-app.post("/api/products/", (req, res, next) => {
-
+app.post("/api/customer/", (req, res, next) => {
     try {
-        var errors = []
-
         if (!req.body) {
-            errors.push("An invalid input");
+            return res.status(400).json({ "error": "Bad Request" });
         }
 
-        const { productName,
-            description,
-            category,
-            brand,
-            expiredDate,
-            manufacturedDate,
-            batchNumber,
-            unitPrice,
-            quantity,
-            createdDate
+        const {
+            name,
+            address,
+            email,
+            dateOfBirth,
+            gender,
+            age,
+            cardHolderName,
+            cardNumber,
+            expiryDate,
+            cvv
         } = req.body;
 
-        var sql = 'INSERT INTO products (productName, description, category, brand, expiredDate, manufacturedDate, batchNumber, unitPrice, quantity, createdDate) VALUES (?,?,?,?,?,?,?,?,?,?)'
-        var params = [productName, description, category, brand, expiredDate, manufacturedDate, batchNumber, unitPrice, quantity, createdDate]
+        // Validation checks
+        if (!validateEmail(email)) {
+            return res.status(400).json({ "error": "Invalid email address" });
+        }
+
+        if (!validateCardNumber(cardNumber)) {
+            return res.status(400).json({ "error": "Invalid credit card number" });
+        }
+
+        // Insert data into the database
+        var sql = 'INSERT INTO customer (name, address, email, dateOfBirth, gender, age, cardHolderName, cardNumber, expiryDate, cvv) VALUES (?,?,?,?,?,?,?,?,?,?)'
+        var params = [name, address, email, dateOfBirth, gender, age, cardHolderName, cardNumber, expiryDate, cvv]
         db.run(sql, params, function (err, result) {
-
             if (err) {
-                res.status(400).json({ "error": err.message })
-                return;
+                return res.status(400).json({ "error": err.message });
             } else {
-                res.json({
-                    "message": "success",
-                    "data": req.body,
-                    "id": this.lastID
-                })
+                return res.status(201).json({
+                    "message": `Customer ${name} has been registered`,
+                    "customerId": this.lastID
+                });
             }
-
         });
-    } catch (E) {
-        res.status(400).send(E);
+    } catch (e) {
+        return res.status(500).json({ "error": "Internal Server Error" });
     }
 });
 
+// Email validation function
+function validateEmail(email) {
+    // Use a regular expression for basic email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(email);
+}
 
-app.put("/api/products/", (req, res, next) => {
-
-
-    const {
-        id,
-        productName,
-        description,
-        category,
-        brand,
-        expiredDate,
-        manufacturedDate,
-        batchNumber,
-        unitPrice,
-        quantity,
-        createdDate
-    } = req.body;
-
-    db.run(`UPDATE products set productName = ?, description = ?, category = ?, brand = ?,expiredDate=?,manufacturedDate=?,batchNumber=?,unitPrice=?,quantity=?,createdDate=? WHERE id = ?`,
-        [productName, description, category, brand, expiredDate, manufacturedDate, batchNumber, unitPrice, quantity, createdDate, id],
-        function (err, result) {
-            if (err) {
-                res.status(400).json({ "error": res.message })
-                return;
-            }
-            res.status(200).json({ updated: this.changes });
-        });
-});
+// Credit card number validation function
+function validateCardNumber(cardNumber) {
+    // Check if the card number has exactly 12 digits
+    const cardNumberPattern = /^\d{12}$/;
+    return cardNumberPattern.test(cardNumber);
+}
 
 
-app.delete("/api/products/delete/:id", (req, res, next) => {
+
+
+
+app.delete("/api/customer/delete", (req, res, next) => {
     try {
         db.run(
-            'DELETE FROM products WHERE id = ?',
+            'drop table customer',
             req.params.id,
             function (err, result) {
                 if (err) {
